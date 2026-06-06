@@ -33,12 +33,19 @@
           :key="i"
           class="row q-gutter-sm q-mb-sm items-center"
         >
-          <q-input
+          <q-select
             v-model="ingredient.name"
+            :options="filteredNames(ingredient.name)"
+            use-input
+            fill-input
+            hide-selected
+            input-debounce="0"
             label="Name"
             outlined
             dense
             class="col"
+            new-value-mode="add"
+            @filter="(val, update) => update()"
           />
           <q-input
             v-model="ingredient.quantity"
@@ -64,9 +71,11 @@
 import { reactive, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useRecipeStore } from '../stores/recipes'
+import { useIngredientStore } from '../stores/ingredients'
 import type { Ingredient } from '../stores/recipes'
 
 const store = useRecipeStore()
+const ingredientStore = useIngredientStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -77,9 +86,14 @@ const existing = id ? store.recipes.find((r) => r.id === id) : undefined
 const form = reactive({
   name: existing?.name ?? '',
   description: existing?.description ?? '',
-  duration: existing?.duration ?? undefined as number | undefined,
-  ingredients: existing?.ingredients.map((i) => ({ ...i })) ?? [] as Ingredient[],
+  duration: existing?.duration ?? (undefined as number | undefined),
+  ingredients: existing?.ingredients.map((i) => ({ ...i })) ?? ([] as Ingredient[]),
 })
+
+function filteredNames(current: string) {
+  const q = current?.toLowerCase() ?? ''
+  return ingredientStore.names.filter((n) => n.toLowerCase().includes(q))
+}
 
 function addIngredient() {
   form.ingredients.push({ name: '', quantity: '' })
@@ -90,9 +104,13 @@ function removeIngredient(i: number) {
 }
 
 function submit() {
+  const ingredients = form.ingredients.filter((ing) => ing.name)
+
+  ingredientStore.sync(ingredients.map((i) => i.name))
+
   const data = {
     name: form.name,
-    ingredients: form.ingredients.filter((ing) => ing.name),
+    ingredients,
     ...(form.description ? { description: form.description } : {}),
     ...(form.duration ? { duration: form.duration } : {}),
   }
