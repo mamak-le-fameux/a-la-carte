@@ -39,10 +39,18 @@ export const useRecipeStore = defineStore('recipes', () => {
     persist()
   }
 
+  function update(id: string, data: Omit<Recipe, 'id' | 'createdAt'>) {
+    const idx = recipes.value.findIndex((r) => r.id === id)
+    if (idx !== -1) {
+      recipes.value[idx] = { ...recipes.value[idx]!, ...data }
+      persist()
+    }
+  }
+
   function remove(id: string) {
     recipes.value = recipes.value.filter((r) => r.id !== id)
     persist()
   }
 
-  return { recipes, add, remove }
+  return { recipes, add, update, remove }
 })

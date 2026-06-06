@@ -1,5 +1,7 @@
 <template>
   <q-page padding>
+    <div class="text-h6 q-mb-md">{{ isEdit ? 'Edit recipe' : 'New recipe' }}</div>
+
     <q-form @submit="submit" class="q-gutter-md">
       <q-input
         v-model="form.name"
@@ -37,7 +39,6 @@
             outlined
             dense
             class="col"
-            :rules="[(v) => !!v || 'Required']"
           />
           <q-input
             v-model="ingredient.quantity"
@@ -53,26 +54,31 @@
 
       <div class="row justify-end q-gutter-sm">
         <q-btn flat label="Cancel" to="/" />
-        <q-btn type="submit" label="Save recipe" color="primary" />
+        <q-btn type="submit" :label="isEdit ? 'Save changes' : 'Save recipe'" color="primary" />
       </div>
     </q-form>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { reactive, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useRecipeStore } from '../stores/recipes'
 import type { Ingredient } from '../stores/recipes'
 
 const store = useRecipeStore()
 const router = useRouter()
+const route = useRoute()
+
+const id = route.params.id as string | undefined
+const isEdit = computed(() => !!id)
+const existing = id ? store.recipes.find((r) => r.id === id) : undefined
 
 const form = reactive({
-  name: '',
-  description: '',
-  duration: undefined as number | undefined,
-  ingredients: [] as Ingredient[],
+  name: existing?.name ?? '',
+  description: existing?.description ?? '',
+  duration: existing?.duration ?? undefined as number | undefined,
+  ingredients: existing?.ingredients.map((i) => ({ ...i })) ?? [] as Ingredient[],
 })
 
 function addIngredient() {
@@ -84,12 +90,19 @@ function removeIngredient(i: number) {
 }
 
 function submit() {
-  store.add({
+  const data = {
     name: form.name,
-    description: form.description || undefined,
-    duration: form.duration || undefined,
     ingredients: form.ingredients.filter((ing) => ing.name),
-  })
+    ...(form.description ? { description: form.description } : {}),
+    ...(form.duration ? { duration: form.duration } : {}),
+  }
+
+  if (isEdit.value && id) {
+    store.update(id, data)
+  } else {
+    store.add(data)
+  }
+
   void router.push('/')
 }
 </script>
