@@ -1,43 +1,59 @@
 <template>
-  <q-page class="row items-center justify-evenly">
-    <example-component
-      title="Example component"
-      active
-      :todos="todos"
-      :meta="meta"
-    ></example-component>
+  <q-page padding>
+    <q-input
+      v-model="search"
+      placeholder="Search recipes..."
+      outlined
+      dense
+      clearable
+      class="q-mb-md"
+    >
+      <template #prepend><q-icon name="search" /></template>
+    </q-input>
+
+    <q-list separator bordered rounded v-if="filtered.length">
+      <q-item
+        v-for="recipe in filtered"
+        :key="recipe.id"
+        clickable
+        v-ripple
+        :to="`/recipes/${recipe.id}`"
+      >
+        <q-item-section>
+          <q-item-label>{{ recipe.name }}</q-item-label>
+          <q-item-label caption v-if="recipe.duration || recipe.description">
+            <span v-if="recipe.duration">{{ recipe.duration }} min</span>
+            <span v-if="recipe.duration && recipe.description"> · </span>
+            <span v-if="recipe.description">{{ recipe.description }}</span>
+          </q-item-label>
+        </q-item-section>
+        <q-item-section side>
+          <q-icon name="chevron_right" color="grey" />
+        </q-item-section>
+      </q-item>
+    </q-list>
+
+    <div v-else class="text-center text-grey q-mt-xl">
+      <q-icon name="restaurant_menu" size="4rem" color="grey-4" />
+      <div class="q-mt-sm">{{ search ? 'No recipes match' : 'No recipes yet' }}</div>
+    </div>
+
+    <q-page-sticky position="bottom-right" :offset="[18, 18]">
+      <q-btn fab icon="add" color="primary" to="/recipes/new" />
+    </q-page-sticky>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import type { Todo, Meta } from 'components/models';
-import ExampleComponent from 'components/ExampleComponent.vue';
+import { ref, computed } from 'vue'
+import { useRecipeStore } from '../stores/recipes'
 
-const todos = ref<Todo[]>([
-  {
-    id: 1,
-    content: 'ct1',
-  },
-  {
-    id: 2,
-    content: 'ct2',
-  },
-  {
-    id: 3,
-    content: 'ct3',
-  },
-  {
-    id: 4,
-    content: 'ct4',
-  },
-  {
-    id: 5,
-    content: 'ct5',
-  },
-]);
+const store = useRecipeStore()
+const search = ref('')
 
-const meta = ref<Meta>({
-  totalCount: 1200,
-});
+const filtered = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  if (!q) return store.recipes
+  return store.recipes.filter((r) => r.name.toLowerCase().includes(q))
+})
 </script>
